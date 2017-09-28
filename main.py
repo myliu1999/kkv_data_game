@@ -29,6 +29,7 @@ ans_header = [
 
 class AnswerReader:
     def __init__(self, ans_file):
+        print(ans_file)
         reader = csv.DictReader(codecs.open(ans_file, 'r', encoding='utf-8'))
         self.data = list(reader)
 
@@ -95,26 +96,35 @@ def write_out_answer(output_filename, stat, start_index):
 
 
 def processing(stat):
+    threshold = 5
     for i in range(0, len(stat)):
-        for j in range(len(stat[i])):
-            val = stat[i][j]
-            if val >= (20 * 60):
-                stat[i][j] = 1
-            else:
-                stat[i][j] = 0
+        stat[i] = [1 if val >= (60 * threshold) else 0 for val in stat[i]]
+
+
+def is_valid_dt(dt):
+    threshold = '2017-06-17 00:00:00'
+    target_dt = datetime.strptime(threshold, '%Y-%m-%d %H:%M:%S')
+    # print('%s %s %s %d' % (target_dt, dt, target_dt - dt, target_dt < dt))
+
+    return target_dt < dt
 
 
 def main():
 
-    ans_obj = AnswerReader(ans_train)
+    ans_obj = AnswerReader(ans_test)
 
-    stat = [[0] * SLOT_COUNT] * ans_obj.entry_count
+    stat = [[0 for i in range(SLOT_COUNT)] for j in range(ans_obj.entry_count)]
 
-    reader = csv.DictReader(codecs.open(label_train_cut, 'r', encoding='utf-8'))
-    for session in reader:
-        dt = datetime.strptime(session['sessionStartTime'], '%Y-%m-%d %H:%M:%S')
-        # print('%s %s %s %d' % (session['userId'], session['sessionStartTime'], session['sessionLength'], datetime_to_slot(dt)))
-        stat[int(session['userId']) - ans_obj.start_index][datetime_to_slot(dt)] += int(session['sessionLength'])
+    for i in range(60, 100):
+        input_filename = '%s-%05d' % (PATH + 'log/test/log', i)
+        print(input_filename)
+        reader = csv.DictReader(codecs.open(input_filename, 'r', encoding='utf-8'))
+        for session in reader:
+            dt = datetime.strptime(session['sessionStartTime'], '%Y-%m-%d %H:%M:%S')
+            # print('%s %s %s %d' % (session['userId'], session['sessionStartTime'], session['sessionLength'], datetime_to_slot(dt)))
+            # print('%d %d %d' % (int(session['userId']), datetime_to_slot(dt), int(session['sessionLength'])))
+            if is_valid_dt(dt):
+                stat[int(session['userId']) - ans_obj.start_index][datetime_to_slot(dt)] += int(session['sessionLength'])
 
     processing(stat)
     write_out_answer(OUTPUT_FILENAME, stat, ans_obj.start_index)
