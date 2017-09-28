@@ -64,16 +64,25 @@ def datetime_to_slot(dt):
     # print(dt.weekday())
     offset = weekday_map[dt.weekday()] * 4
 
-    if s >= 1 * 60 * 60 and s < 9 * 60 * 60:
+    if s < 1 * 60 * 60:
+        offset -= 4
+        slot = 3
+    elif s < 9 * 60 * 60:
         slot = 0
-    elif s >= 9 * 60 * 60 and s < 17 * 60 * 60:
+    elif s < 17 * 60 * 60:
         slot = 1
-    elif s >= 17 * 60 * 60 and s < 21 * 60 * 60:
+    elif s < 21 * 60 * 60:
         slot = 2
     else:
         slot = 3
 
-    return offset + slot
+    ret = offset + slot
+
+    if ret < 0:
+        assert(ret == -1)
+        ret += 28
+
+    return ret
 
 
 def write_out_answer(output_filename, stat, start_index):
@@ -111,13 +120,13 @@ def get_weight(dt):
     target_3rd = datetime.strptime(three_week_before, '%Y-%m-%d %H:%M:%S')
     target_4th = datetime.strptime(four_week_before, '%Y-%m-%d %H:%M:%S')
     if (target_1st < dt):
-        weight = 0.66
+        weight = 0.4
     elif (target_2nd < dt):
-        weight = 0.33
+        weight = 0.3
     elif (target_3rd < dt):
-        weight = 0
+        weight = 0.2
     else:
-        weight = 0
+        weight = 0.1
     # print('%s %s %s %d' % (target_dt, dt, target_dt - dt, target_dt < dt))
 
     return weight
@@ -145,11 +154,10 @@ def human_learning(is_train, start_index=0):
         reader = csv.DictReader(codecs.open(input_filename, 'r', encoding='utf-8'))
         for session in reader:
             dt = datetime.strptime(session['sessionStartTime'], '%Y-%m-%d %H:%M:%S')
-            # print('%s %s %s %d' % (session['userId'], session['sessionStartTime'], session['sessionLength'], datetime_to_slot(dt)))
-            # print('%d %d %d' % (int(session['userId']), datetime_to_slot(dt), int(session['sessionLength'])))
             weight = get_weight(dt)
-            if weight > 0:
-                stat[int(session['userId']) - ans_obj.start_index][datetime_to_slot(dt)] += (weight * int(session['sessionLength']))
+            watch = int(session['sessionLength'])
+            if weight > 0 and watch >= 10 * 60:
+                stat[int(session['userId']) - ans_obj.start_index][datetime_to_slot(dt)] += (weight * watch)
 
     processing(stat)
     write_out_answer(OUTPUT_FILENAME, stat, ans_obj.start_index)
@@ -161,31 +169,11 @@ def human_learning(is_train, start_index=0):
 def main():
     is_train = False
     human_learning(is_train)
-    # for i in range(60):
-    #    human_learning(is_train, i)
 
 
 '''
-    ans_obj = AnswerReader(ans_train)
-
-    stat = [[0 for i in range(SLOT_COUNT)] for j in range(ans_obj.entry_count)]
-
-    for i in range(0, 1):
-        input_filename = '%s-%05d' % (PATH + 'log/train/log', i)
-        print(input_filename)
-        reader = csv.DictReader(codecs.open(input_filename, 'r', encoding='utf-8'))
-        for session in reader:
-            dt = datetime.strptime(session['sessionStartTime'], '%Y-%m-%d %H:%M:%S')
-            # print('%s %s %s %d' % (session['userId'], session['sessionStartTime'], session['sessionLength'], datetime_to_slot(dt)))
-            # print('%d %d %d' % (int(session['userId']), datetime_to_slot(dt), int(session['sessionLength'])))
-            if is_valid_dt(dt):
-                stat[int(session['userId']) - ans_obj.start_index][datetime_to_slot(dt)] += int(session['sessionLength'])
-
-    processing(stat)
-    write_out_answer(OUTPUT_FILENAME, stat, ans_obj.start_index)
-
-    ans_obj2 = AnswerReader(OUTPUT_FILENAME)
-    ans_obj.compare(ans_obj2)
+    for i in range(60):
+        human_learning(is_train, i)
 '''
 
 
