@@ -96,7 +96,7 @@ def write_out_answer(output_filename, stat, start_index):
 
 
 def processing(stat):
-    threshold = 5
+    threshold = 20
     for i in range(0, len(stat)):
         stat[i] = [1 if val >= (60 * threshold) else 0 for val in stat[i]]
 
