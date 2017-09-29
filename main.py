@@ -105,7 +105,7 @@ def write_out_answer(output_filename, stat, start_index):
 
 
 def processing(stat):
-    threshold = 15 * 1.5
+    threshold = 20
     for i in range(0, len(stat)):
         stat[i] = [1 if val >= (60 * threshold) else 0 for val in stat[i]]
 
@@ -120,13 +120,13 @@ def get_weight(dt):
     target_3rd = datetime.strptime(three_week_before, '%Y-%m-%d %H:%M:%S')
     target_4th = datetime.strptime(four_week_before, '%Y-%m-%d %H:%M:%S')
     if (target_1st < dt):
-        weight = 0.4
+        weight = 0.7
     elif (target_2nd < dt):
         weight = 0.3
     elif (target_3rd < dt):
-        weight = 0.2
+        weight = 0
     else:
-        weight = 0.1
+        weight = 0
     # print('%s %s %s %d' % (target_dt, dt, target_dt - dt, target_dt < dt))
 
     return weight
@@ -156,7 +156,7 @@ def human_learning(is_train, start_index=0):
             dt = datetime.strptime(session['sessionStartTime'], '%Y-%m-%d %H:%M:%S')
             weight = get_weight(dt)
             watch = int(session['sessionLength'])
-            if weight > 0 and watch >= 15 * 60:
+            if weight > 0 and watch >= 10 * 60:
                 stat[int(session['userId']) - ans_obj.start_index][datetime_to_slot(dt)] += (weight * watch)
 
     processing(stat)
