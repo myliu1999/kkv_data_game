@@ -4,6 +4,8 @@ import codecs
 import csv
 from datetime import datetime
 
+from auc import auc
+
 PATH = '/Users/louisliu/vagrant/github/kkv_data_game/'
 SLOT_COUNT = 7 * 4
 OUTPUT_FILENAME = PATH + 'out.ans'
@@ -45,14 +47,22 @@ class AnswerReader:
         assert(self.entry_count == ans2.entry_count)
         assert(self.start_index == ans2.start_index)
 
-        hit_count = 0
+        guess = []
+        truth = []
+        guess_l = [[] for i in range(SLOT_COUNT)]
+        truth_l = [[] for i in range(SLOT_COUNT)]
+
         for row_index in range(0, self.entry_count):
             for column_index in range(1, SLOT_COUNT + 1):
-                if self.data[row_index][ans_header[column_index]] == ans2.data[row_index][ans_header[column_index]]:
-                    hit_count += 1
+                guess.append(int(ans2.data[row_index][ans_header[column_index]]))
+                truth.append(int(self.data[row_index][ans_header[column_index]]))
+                guess_l[column_index - 1].append(int(ans2.data[row_index][ans_header[column_index]]))
+                truth_l[column_index - 1].append(int(self.data[row_index][ans_header[column_index]]))
 
-        hit_rate = hit_count / (SLOT_COUNT * self.entry_count) * 100
-        print('hit_rate is %f' % hit_rate)
+        print('score: %f' % auc(guess, truth))
+
+        for i in range(SLOT_COUNT):
+            print('\tscore[%s] is %f' % (ans_header[i + 1], auc(guess_l[i], truth_l[i])))
 
 
 def datetime_to_slot(dt):
@@ -105,7 +115,7 @@ def write_out_answer(output_filename, stat, start_index):
 
 
 def processing(stat):
-    threshold = 20
+    threshold = 15
     for i in range(0, len(stat)):
         stat[i] = [1 if val >= (60 * threshold) else 0 for val in stat[i]]
 
@@ -119,14 +129,17 @@ def get_weight(dt):
     target_2nd = datetime.strptime(two_week_before, '%Y-%m-%d %H:%M:%S')
     target_3rd = datetime.strptime(three_week_before, '%Y-%m-%d %H:%M:%S')
     target_4th = datetime.strptime(four_week_before, '%Y-%m-%d %H:%M:%S')
+
     if (target_1st < dt):
-        weight = 0.7
+        weight = 1
     elif (target_2nd < dt):
-        weight = 0.3
+        weight = 0.5
     elif (target_3rd < dt):
-        weight = 0
+        weight = 0.2
+    elif (target_4th < dt):
+        weight = 0.1
     else:
-        weight = 0
+        weight = 0.1
     # print('%s %s %s %d' % (target_dt, dt, target_dt - dt, target_dt < dt))
 
     return weight
@@ -156,14 +169,15 @@ def human_learning(is_train, start_index=0):
             dt = datetime.strptime(session['sessionStartTime'], '%Y-%m-%d %H:%M:%S')
             weight = get_weight(dt)
             watch = int(session['sessionLength'])
-            if weight > 0 and watch >= 10 * 60:
+            if weight > 0 and watch >= 5 * 60:
                 stat[int(session['userId']) - ans_obj.start_index][datetime_to_slot(dt)] += (weight * watch)
 
     processing(stat)
     write_out_answer(OUTPUT_FILENAME, stat, ans_obj.start_index)
 
-    ans_obj2 = AnswerReader(OUTPUT_FILENAME)
-    ans_obj.compare(ans_obj2)
+    if is_train:
+        ans_obj2 = AnswerReader(OUTPUT_FILENAME)
+        ans_obj.compare(ans_obj2)
 
 
 def main():
