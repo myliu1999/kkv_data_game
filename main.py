@@ -121,10 +121,10 @@ def processing(stat):
 
 
 def get_weight(dt):
-    one_week_before = '2017-06-17 00:00:00'
-    two_week_before = '2017-06-10 00:00:00'
-    three_week_before = '2017-06-03 00:00:00'
-    four_week_before = '2017-05-27 00:00:00'
+    one_week_before = '2017-06-17 01:00:00'
+    two_week_before = '2017-06-10 01:00:00'
+    three_week_before = '2017-06-03 01:00:00'
+    four_week_before = '2017-05-27 01:00:00'
     target_1st = datetime.strptime(one_week_before, '%Y-%m-%d %H:%M:%S')
     target_2nd = datetime.strptime(two_week_before, '%Y-%m-%d %H:%M:%S')
     target_3rd = datetime.strptime(three_week_before, '%Y-%m-%d %H:%M:%S')
@@ -169,7 +169,7 @@ def human_learning(is_train, start_index=0):
             dt = datetime.strptime(session['sessionStartTime'], '%Y-%m-%d %H:%M:%S')
             weight = get_weight(dt)
             watch = int(session['sessionLength'])
-            if weight > 0 and watch >= 5 * 60:
+            if weight > 0 and watch >= 6 * 60 and watch < 2 * 60 * 60:
                 stat[int(session['userId']) - ans_obj.start_index][datetime_to_slot(dt)] += (weight * watch)
 
     processing(stat)
