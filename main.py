@@ -2,7 +2,7 @@
 
 import codecs
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from auc import auc
 
@@ -115,34 +115,22 @@ def write_out_answer(output_filename, stat, start_index):
 
 
 def processing(stat):
-    threshold = 15
+    threshold = 32
     for i in range(0, len(stat)):
         stat[i] = [1 if val >= (60 * threshold) else 0 for val in stat[i]]
 
 
 def get_weight(dt):
-    one_week_before = '2017-06-17 01:00:00'
-    two_week_before = '2017-06-10 01:00:00'
-    three_week_before = '2017-06-03 01:00:00'
-    four_week_before = '2017-05-27 01:00:00'
-    target_1st = datetime.strptime(one_week_before, '%Y-%m-%d %H:%M:%S')
-    target_2nd = datetime.strptime(two_week_before, '%Y-%m-%d %H:%M:%S')
-    target_3rd = datetime.strptime(three_week_before, '%Y-%m-%d %H:%M:%S')
-    target_4th = datetime.strptime(four_week_before, '%Y-%m-%d %H:%M:%S')
+    target = '2017-06-24 01:00:00'
+    target_dt = datetime.strptime(target, '%Y-%m-%d %H:%M:%S')
 
-    if (target_1st < dt):
-        weight = 1
-    elif (target_2nd < dt):
-        weight = 0.5
-    elif (target_3rd < dt):
-        weight = 0.2
-    elif (target_4th < dt):
-        weight = 0.1
-    else:
-        weight = 0.1
-    # print('%s %s %s %d' % (target_dt, dt, target_dt - dt, target_dt < dt))
+    x = (target_dt - dt).days / 7
+    weight = (25 - x) / 25
+    # print('%d %f' % (x, weight))
 
-    return weight
+    # assert(weight > 0)
+
+    return weight * weight
 
 
 def human_learning(is_train, start_index=0):
@@ -169,8 +157,17 @@ def human_learning(is_train, start_index=0):
             dt = datetime.strptime(session['sessionStartTime'], '%Y-%m-%d %H:%M:%S')
             weight = get_weight(dt)
             watch = int(session['sessionLength'])
-            if weight > 0 and watch >= 6 * 60 and watch < 2 * 60 * 60:
-                stat[int(session['userId']) - ans_obj.start_index][datetime_to_slot(dt)] += (weight * watch)
+            dt2 = dt + timedelta(seconds=watch)
+            timeslot = datetime_to_slot(dt)
+            timeslot2 = datetime_to_slot(dt2)
+            if watch > 4 * 60 * 60:
+                continue
+            if timeslot == timeslot2:
+                stat[int(session['userId']) - ans_obj.start_index][timeslot] += (weight * watch)
+            else:
+                stat[int(session['userId']) - ans_obj.start_index][timeslot] += (weight * watch / 2)
+                weight2 = get_weight(dt2)
+                stat[int(session['userId']) - ans_obj.start_index][timeslot2] += (weight2 * watch / 2)
 
     processing(stat)
     write_out_answer(OUTPUT_FILENAME, stat, ans_obj.start_index)
