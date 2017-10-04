@@ -115,9 +115,36 @@ def write_out_answer(output_filename, stat, start_index):
 
 
 def processing(stat):
-    threshold = 32
+    threshold = [0 for i in range(0, SLOT_COUNT)]
+
+    for i in range(0, len(threshold)):
+        if (i % 4) == 0:
+            threshold[i] = 60 * 60
+        elif (i % 4) == 1:
+            threshold[i] = 30 * 60
+        elif (i % 4) == 2:
+            threshold[i] = 32 * 60
+        elif (i % 4) == 3:
+            threshold[i] = 30 * 60
+
+    threshold[0] = 70 * 60
+    threshold[1] = 30 * 60
+    threshold[2] = 26 * 60
+    threshold[3] = 30 * 60
+    threshold[4] = 50 * 60
+    threshold[16] = 40 * 60
+    threshold[22] = 60 * 60
+    threshold[26] = 60 * 60
+    threshold[27] = 60 * 60
+
+    # print(threshold)
+
     for i in range(0, len(stat)):
-        stat[i] = [1 if val >= (60 * threshold) else 0 for val in stat[i]]
+        for j in range(0, len(stat[i])):
+            if stat[i][j] > threshold[j]:
+                stat[i][j] = 1
+            else:
+                stat[i][j] = 0
 
 
 def get_weight(dt):
