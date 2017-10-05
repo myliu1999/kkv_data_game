@@ -187,7 +187,7 @@ def human_learning(is_train, start_index=0):
             dt2 = dt + timedelta(seconds=watch)
             timeslot = datetime_to_slot(dt)
             timeslot2 = datetime_to_slot(dt2)
-            if watch > 4 * 60 * 60:
+            if watch > 5 * 60 * 60:
                 continue
             if timeslot == timeslot2:
                 stat[int(session['userId']) - ans_obj.start_index][timeslot] += (weight * watch)
