@@ -115,33 +115,18 @@ def write_out_answer(output_filename, stat, start_index):
 
 
 def processing(stat):
-    threshold = [0 for i in range(0, SLOT_COUNT)]
-
-    for i in range(0, len(threshold)):
-        if (i % 4) == 0:
-            threshold[i] = 60 * 60
-        elif (i % 4) == 1:
-            threshold[i] = 30 * 60
-        elif (i % 4) == 2:
-            threshold[i] = 32 * 60
-        elif (i % 4) == 3:
-            threshold[i] = 30 * 60
-
-    threshold[0] = 70 * 60
-    threshold[1] = 30 * 60
-    threshold[2] = 26 * 60
-    threshold[3] = 30 * 60
-    threshold[4] = 50 * 60
-    threshold[16] = 40 * 60
-    threshold[22] = 60 * 60
-    threshold[26] = 60 * 60
-    threshold[27] = 60 * 60
-
-    # print(threshold)
+    threshold = [70, 30, 26, 30,
+                 50, 30, 32, 30,
+                 60, 30, 32, 30,
+                 60, 30, 32, 30,
+                 40, 30, 32, 30,
+                 60, 30, 60, 30,
+                 60, 30, 32, 30,
+                 60, 30, 60, 60]
 
     for i in range(0, len(stat)):
         for j in range(0, len(stat[i])):
-            if stat[i][j] > threshold[j]:
+            if stat[i][j] > threshold[j] * 60:
                 stat[i][j] = 1
             else:
                 stat[i][j] = 0
@@ -155,7 +140,7 @@ def get_weight(dt):
     weight = (25 - x) / 25
     # print('%d %f' % (x, weight))
 
-    # assert(weight > 0)
+    # assert(weight > 0 and weight <= 1)
 
     return weight * weight
 
@@ -187,7 +172,7 @@ def human_learning(is_train, start_index=0):
             dt2 = dt + timedelta(seconds=watch)
             timeslot = datetime_to_slot(dt)
             timeslot2 = datetime_to_slot(dt2)
-            if watch > 5 * 60 * 60:
+            if watch == 0 or watch > 5 * 60 * 60:
                 continue
             if timeslot == timeslot2:
                 stat[int(session['userId']) - ans_obj.start_index][timeslot] += (weight * watch)
@@ -205,7 +190,7 @@ def human_learning(is_train, start_index=0):
 
 
 def main():
-    is_train = False
+    is_train = True
 
     if is_train:
         for i in range(60):
