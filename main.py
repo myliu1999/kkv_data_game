@@ -3,12 +3,18 @@
 import codecs
 import csv
 from datetime import datetime, timedelta
+import math
+
+from numpy import array
 
 from auc import auc
+import ml
 
 PATH = '/Users/louisliu/vagrant/github/kkv_data_game/'
 SLOT_COUNT = 7 * 4
+FEATURE_COUNT = 25
 OUTPUT_FILENAME = PATH + 'out.ans'
+OUTPUT_FILENAME2 = PATH + 'out2.ans'
 
 label_train_cut = PATH + 'log/train/log-00000_cut'
 label_train = PATH + 'log/train/log-00000'
@@ -54,15 +60,28 @@ class AnswerReader:
 
         for row_index in range(0, self.entry_count):
             for column_index in range(1, SLOT_COUNT + 1):
-                guess.append(int(ans2.data[row_index][ans_header[column_index]]))
-                truth.append(int(self.data[row_index][ans_header[column_index]]))
-                guess_l[column_index - 1].append(int(ans2.data[row_index][ans_header[column_index]]))
-                truth_l[column_index - 1].append(int(self.data[row_index][ans_header[column_index]]))
+                guess.append(float(ans2.data[row_index][ans_header[column_index]]))
+                truth.append(float(self.data[row_index][ans_header[column_index]]))
+                guess_l[column_index - 1].append(float(ans2.data[row_index][ans_header[column_index]]))
+                truth_l[column_index - 1].append(float(self.data[row_index][ans_header[column_index]]))
 
         print('score: %f' % auc(guess, truth))
 
         for i in range(SLOT_COUNT):
             print('\tscore[%s] is %f' % (ans_header[i + 1], auc(guess_l[i], truth_l[i])))
+
+    def compare_single(self, column_index, column):
+        guess = []
+        truth = []
+
+        for row_index in range(0, self.entry_count):
+            guess.append(column[row_index])
+            truth.append(int(self.data[row_index][ans_header[column_index]]))
+
+        assert(len(guess) == len(truth))
+        # print(truth)
+
+        return auc(guess, truth)
 
 
 def datetime_to_slot(dt):
@@ -114,19 +133,50 @@ def write_out_answer(output_filename, stat, start_index):
     f.close()
 
 
-def processing(stat):
-    threshold = [70, 30, 26, 30,
-                 50, 30, 32, 30,
-                 60, 30, 32, 30,
-                 60, 30, 32, 30,
-                 40, 30, 32, 30,
-                 60, 30, 60, 30,
-                 60, 30, 32, 30,
-                 60, 30, 60, 60]
+def write_out_answer2(output_filename, predict, start_index):
+    assert(len(predict) == SLOT_COUNT)
+    f = open(output_filename, 'w')
 
+    for item in ans_header[0:-1]:
+        f.write('%s,' % item)
+    f.write('%s\n' % ans_header[-1])
+
+    entry_count = len(predict[0])
+    for i in range(entry_count):
+        user_id = start_index + i
+        f.write('%d,' % user_id)
+        for j in range(SLOT_COUNT - 1):
+            f.write('%f,' % predict[j][i])
+        f.write('%f\n' % predict[-1][i])
+
+    f.close()
+
+
+def column(matrix, i):
+    return [row[i] for row in matrix]
+
+
+def cal_threshold(stat):
+    # print(column(stat, 0))
+
+    threshold = [29 for i in range(SLOT_COUNT)]
+
+    return threshold
+'''
+    for i in range(0, len(threshold)):
+        sorted_list = column(stat, i)
+        sorted_list2 = [i for i in sorted_list if i > 0]
+        avg = sum(sorted_list2) / float(len(sorted_list2))
+        threshold[i] = int(avg)
+        print(threshold[i])
+
+    return threshold
+'''
+
+def processing(stat, threshold):
     for i in range(0, len(stat)):
         for j in range(0, len(stat[i])):
-            if stat[i][j] > threshold[j] * 60:
+            if stat[i][j] > threshold[j]:
                 stat[i][j] = 1
             else:
                 stat[i][j] = 0
@@ -143,6 +193,19 @@ def get_weight(dt):
     # assert(weight > 0 and weight <= 1)
 
     return weight * weight
+
+
+def get_offset(dt):
+    target = '2017-06-24 01:00:00'
+    target_dt = datetime.strptime(target, '%Y-%m-%d %H:%M:%S')
+
+    x = (target_dt - dt).days / 7
+    # weight = (25 - x) / 25
+    # print('%d %f' % (x, weight))
+
+    # assert(weight > 0 and weight <= 1)
+
+    return int(x)
 
 
 def human_learning(is_train, start_index=0):
@@ -168,20 +231,25 @@ def human_learning(is_train, start_index=0):
         for session in reader:
             dt = datetime.strptime(session['sessionStartTime'], '%Y-%m-%d %H:%M:%S')
             weight = get_weight(dt)
-            watch = int(session['sessionLength'])
+            watch = int(session['sessionLength']) / 60
             dt2 = dt + timedelta(seconds=watch)
             timeslot = datetime_to_slot(dt)
             timeslot2 = datetime_to_slot(dt2)
-            if watch == 0 or watch > 5 * 60 * 60:
+            if watch == 0:
                 continue
+            if watch < 10:
+                continue
+            if watch >= 4 * 60:
+                watch = 4 * 60
             if timeslot == timeslot2:
                 stat[int(session['userId']) - ans_obj.start_index][timeslot] += (weight * watch)
             else:
-                stat[int(session['userId']) - ans_obj.start_index][timeslot] += (weight * watch / 2)
-                weight2 = get_weight(dt2)
-                stat[int(session['userId']) - ans_obj.start_index][timeslot2] += (weight2 * watch / 2)
+                pass
+                #stat[int(session['userId']) - ans_obj.start_index][timeslot] += (weight * watch / 3)
+                #weight2 = get_weight(dt2)
+                #stat[int(session['userId']) - ans_obj.start_index][timeslot2] += (weight2 * watch / 3)
 
-    processing(stat)
+    processing(stat, cal_threshold(stat))
     write_out_answer(OUTPUT_FILENAME, stat, ans_obj.start_index)
 
     if is_train:
@@ -189,14 +257,101 @@ def human_learning(is_train, start_index=0):
         ans_obj.compare(ans_obj2)
 
 
-def main():
-    is_train = True
+def get_x_data(is_train, index, ans_obj):
+    x_data = [[0 for i in range(FEATURE_COUNT * SLOT_COUNT)] for y in range(ans_obj.entry_count)]
 
     if is_train:
-        for i in range(60):
-            human_learning(is_train, i)
+        count = 1
     else:
-        human_learning(is_train)
+        count = 40
+
+    for i in range(index, index + count):
+        if is_train:
+            input_filename = '%s-%05d' % (PATH + 'log/train/log', i)
+        else:
+            input_filename = '%s-%05d' % (PATH + 'log/test/log', i)
+
+        print(input_filename)
+
+        reader = csv.DictReader(codecs.open(input_filename, 'r', encoding='utf-8'))
+        for session in reader:
+            dt = datetime.strptime(session['sessionStartTime'], '%Y-%m-%d %H:%M:%S')
+            offset = get_offset(dt)
+            watch = int(session['sessionLength'])
+            timeslot = datetime_to_slot(dt)
+            if watch < 300:
+                continue
+
+            if x_data[int(session['userId']) - ans_obj.start_index][offset + timeslot * FEATURE_COUNT] < 1:
+                x_data[int(session['userId']) - ans_obj.start_index][offset + timeslot * FEATURE_COUNT] += 0.05
+
+    return x_data
+
+
+def machine_learning(is_train, train_start_index=0):
+    ans_train = PATH + 'ans/ans-%05d' % train_start_index
+    ans_obj_train = AnswerReader(ans_train)
+
+    if is_train is False:
+        ans_obj_test = AnswerReader(ans_test)
+        test_start_index = 60
+        test_end_index = 100
+
+    m_train = ans_obj_train.entry_count
+    if is_train is False:
+        m_test = ans_obj_test.entry_count
+
+    # prepare training set
+    train_set_x_orig = get_x_data(True, train_start_index, ans_obj_train)
+    train_set_x = array(train_set_x_orig).T
+
+    # prepare test set
+    if is_train is False:
+        test_set_x_orig = get_x_data(False, test_start_index, ans_obj_test)
+        test_set_x = array(test_set_x_orig).T
+    else:
+        test_set_x = None
+
+    num_iterations = 4000 * 64
+    learning_rate = 0.005
+    print_cost = False
+    print('num_iterations = %d, learning_rate = %f' % (num_iterations, learning_rate))
+    predict_train = [[] for i in range(SLOT_COUNT)]
+    if is_train is False:
+        predict_test = [[] for i in range(SLOT_COUNT)]
+    for model_no in range(1, SLOT_COUNT + 1):
+        train_set_y_orig = [[int(ans_obj_train.data[i][ans_header[model_no]]) for i in range(m_train)]]
+        train_set_y = array(train_set_y_orig)
+
+        d = ml.model(train_set_x, train_set_y, test_set_x, None, num_iterations, learning_rate, print_cost)
+
+        predict_train[model_no - 1] = d['Y_prediction2_train'][0]
+        if is_train is False:
+            predict_test[model_no - 1] = d['Y_prediction2_test'][0]
+
+        score = ans_obj_train.compare_single(model_no, predict_train[model_no - 1])
+        print('[%s] score: %f' % (ans_header[model_no], score))
+
+    write_out_answer2(OUTPUT_FILENAME, predict_train, ans_obj_train.start_index)
+    if is_train is False:
+        write_out_answer2(OUTPUT_FILENAME2, predict_test, ans_obj_test.start_index)
+
+    ans_obj_predict = AnswerReader(OUTPUT_FILENAME)
+    ans_obj_train.compare(ans_obj_predict)
+
+
+def main():
+    is_human_learning = False
+    is_train = False
+
+    if is_human_learning:
+        if is_train:
+            for i in range(60):
+                human_learning(is_train, i)
+        else:
+            human_learning(is_train)
+    else:
+        machine_learning(is_train)
 
 
 if __name__ == '__main__':
