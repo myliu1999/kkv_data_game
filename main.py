@@ -258,12 +258,16 @@ def human_learning(is_train, start_index=0):
 
 
 def get_x_data(is_train, index, ans_obj):
-    x_data = [[0 for i in range(FEATURE_COUNT * SLOT_COUNT)] for y in range(ans_obj.entry_count)]
-
     if is_train:
-        count = 1
+        count = len(ans_obj)
+        entry_count = sum(obj.entry_count for obj in ans_obj)
+        start_index = ans_obj[0].start_index
     else:
         count = 40
+        entry_count = ans_obj.entry_count
+        start_index = ans_obj.start_index
+
+    x_data = [[0 for i in range(FEATURE_COUNT * SLOT_COUNT)] for y in range(entry_count)]
 
     for i in range(index, index + count):
         if is_train:
@@ -282,22 +286,23 @@ def get_x_data(is_train, index, ans_obj):
             if watch < 300:
                 continue
 
-            if x_data[int(session['userId']) - ans_obj.start_index][offset + timeslot * FEATURE_COUNT] < 1:
-                x_data[int(session['userId']) - ans_obj.start_index][offset + timeslot * FEATURE_COUNT] += 0.05
+            if x_data[int(session['userId']) - start_index][offset + timeslot * FEATURE_COUNT] < 1:
+                x_data[int(session['userId']) - start_index][offset + timeslot * FEATURE_COUNT] += 0.05
 
     return x_data
 
 
-def machine_learning(is_train, train_start_index=0):
-    ans_train = PATH + 'ans/ans-%05d' % train_start_index
-    ans_obj_train = AnswerReader(ans_train)
+def machine_learning(is_train, train_start_index=0, train_count=60):
+    ans_obj_train = [None for i in range(train_count)]
+    for i in range(train_start_index, train_start_index + train_count):
+        ans_train = PATH + 'ans/ans-%05d' % i
+        ans_obj_train[i] = AnswerReader(ans_train)
 
     if is_train is False:
         ans_obj_test = AnswerReader(ans_test)
         test_start_index = 60
-        test_end_index = 100
 
-    m_train = ans_obj_train.entry_count
+    m_train = sum(ans_obj.entry_count for ans_obj in ans_obj_train)
     if is_train is False:
         m_test = ans_obj_test.entry_count
 
@@ -310,34 +315,39 @@ def machine_learning(is_train, train_start_index=0):
         test_set_x_orig = get_x_data(False, test_start_index, ans_obj_test)
         test_set_x = array(test_set_x_orig).T
     else:
-        test_set_x = None
+        test_set_x_orig = get_x_data(True, train_start_index, [ans_obj_train[0]])
+        test_set_x = array(test_set_x_orig).T
 
-    num_iterations = 4000 * 64
+    num_iterations = 1000
     learning_rate = 0.005
-    print_cost = False
+    print_cost = True
     print('num_iterations = %d, learning_rate = %f' % (num_iterations, learning_rate))
     predict_train = [[] for i in range(SLOT_COUNT)]
-    if is_train is False:
-        predict_test = [[] for i in range(SLOT_COUNT)]
+    # if is_train is False:
+    predict_test = [[] for i in range(SLOT_COUNT)]
     for model_no in range(1, SLOT_COUNT + 1):
-        train_set_y_orig = [[int(ans_obj_train.data[i][ans_header[model_no]]) for i in range(m_train)]]
+        train_set_y_orig = [[int(ans_obj_train[j].data[i][ans_header[model_no]]) for j in range(len(ans_obj_train)) for i in range(ans_obj_train[j].entry_count)]]
         train_set_y = array(train_set_y_orig)
 
         d = ml.model(train_set_x, train_set_y, test_set_x, None, num_iterations, learning_rate, print_cost)
 
         predict_train[model_no - 1] = d['Y_prediction2_train'][0]
-        if is_train is False:
-            predict_test[model_no - 1] = d['Y_prediction2_test'][0]
+        #if is_train is False:
+        predict_test[model_no - 1] = d['Y_prediction2_test'][0]
 
-        score = ans_obj_train.compare_single(model_no, predict_train[model_no - 1])
-        print('[%s] score: %f' % (ans_header[model_no], score))
+        # score = ans_obj_train.compare_single(model_no, predict_train[model_no - 1])
+        # print('[%s] score: %f' % (ans_header[model_no], score))
 
-    write_out_answer2(OUTPUT_FILENAME, predict_train, ans_obj_train.start_index)
+    #write_out_answer2(OUTPUT_FILENAME, predict_train, ans_obj_train.start_index)
     if is_train is False:
         write_out_answer2(OUTPUT_FILENAME2, predict_test, ans_obj_test.start_index)
+    else:
+        write_out_answer2(OUTPUT_FILENAME2, predict_test, ans_obj_train[0].start_index)
+        ans_obj_predict = AnswerReader(OUTPUT_FILENAME2)
+        ans_obj_train[0].compare(ans_obj_predict)
 
-    ans_obj_predict = AnswerReader(OUTPUT_FILENAME)
-    ans_obj_train.compare(ans_obj_predict)
+    #ans_obj_predict = AnswerReader(OUTPUT_FILENAME)
+    #ans_obj_train.compare(ans_obj_predict)
 
 
 def main():
