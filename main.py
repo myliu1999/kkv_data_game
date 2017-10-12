@@ -162,16 +162,7 @@ def cal_threshold(stat):
     threshold = [29 for i in range(SLOT_COUNT)]
 
     return threshold
-'''
-    for i in range(0, len(threshold)):
-        sorted_list = column(stat, i)
-        sorted_list2 = [i for i in sorted_list if i > 0]
-        avg = sum(sorted_list2) / float(len(sorted_list2))
-        threshold[i] = int(avg)
-        print(threshold[i])
 
-    return threshold
-'''
 
 def processing(stat, threshold):
     for i in range(0, len(stat)):
@@ -318,36 +309,32 @@ def machine_learning(is_train, train_start_index=0, train_count=60):
         test_set_x_orig = get_x_data(True, train_start_index, [ans_obj_train[0]])
         test_set_x = array(test_set_x_orig).T
 
-    num_iterations = 1000
-    learning_rate = 0.005
+    num_iterations = 4000
+    learning_rate = 0.005 * 2
     print_cost = True
     print('num_iterations = %d, learning_rate = %f' % (num_iterations, learning_rate))
     predict_train = [[] for i in range(SLOT_COUNT)]
     # if is_train is False:
     predict_test = [[] for i in range(SLOT_COUNT)]
     for model_no in range(1, SLOT_COUNT + 1):
+        print(ans_header[model_no])
         train_set_y_orig = [[int(ans_obj_train[j].data[i][ans_header[model_no]]) for j in range(len(ans_obj_train)) for i in range(ans_obj_train[j].entry_count)]]
         train_set_y = array(train_set_y_orig)
 
         d = ml.model(train_set_x, train_set_y, test_set_x, None, num_iterations, learning_rate, print_cost)
 
         predict_train[model_no - 1] = d['Y_prediction2_train'][0]
-        #if is_train is False:
         predict_test[model_no - 1] = d['Y_prediction2_test'][0]
 
         # score = ans_obj_train.compare_single(model_no, predict_train[model_no - 1])
         # print('[%s] score: %f' % (ans_header[model_no], score))
 
-    #write_out_answer2(OUTPUT_FILENAME, predict_train, ans_obj_train.start_index)
     if is_train is False:
         write_out_answer2(OUTPUT_FILENAME2, predict_test, ans_obj_test.start_index)
     else:
         write_out_answer2(OUTPUT_FILENAME2, predict_test, ans_obj_train[0].start_index)
         ans_obj_predict = AnswerReader(OUTPUT_FILENAME2)
         ans_obj_train[0].compare(ans_obj_predict)
-
-    #ans_obj_predict = AnswerReader(OUTPUT_FILENAME)
-    #ans_obj_train.compare(ans_obj_predict)
 
 
 def main():

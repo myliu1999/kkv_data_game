@@ -115,7 +115,7 @@ def model(X_train, Y_train, X_test, Y_test, num_iterations=2000, learning_rate=0
     w = parameters["w"]
     b = parameters["b"]
 
-    # Predict test/train set examples (≈ 2 lines of code)
+    # Predict test/train set examples
     if X_test is not None:
         Y_prediction_test = None
         Y_prediction2_test = predict2(w, b, X_test)
@@ -132,21 +132,20 @@ def model(X_train, Y_train, X_test, Y_test, num_iterations=2000, learning_rate=0
     # if X_test != None:
     #    print("test accuracy: {} %".format(100 - np.mean(np.abs(Y_prediction_test - Y_test)) * 100))
 
-
     d = {"costs": costs,
          "Y_prediction_test": Y_prediction_test,
          "Y_prediction2_test": Y_prediction2_test,
-         "Y_prediction_train" : Y_prediction_train,
-         "Y_prediction2_train" : Y_prediction2_train,
-         "w" : w,
-         "b" : b,
-         "learning_rate" : learning_rate,
+         "Y_prediction_train": Y_prediction_train,
+         "Y_prediction2_train": Y_prediction2_train,
+         "w": w,
+         "b": b,
+         "learning_rate": learning_rate,
          "num_iterations": num_iterations}
 
     return d
 
 
-def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost = False):
+def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost=False):
     """
     This function optimizes w and b by running a gradient descent algorithm
 
@@ -174,15 +173,14 @@ def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost = False):
 
     for i in range(num_iterations):
 
-
-        # Cost and gradient calculation (≈ 1-4 lines of code)
+        # Cost and gradient calculation
         grads, cost = propagate(w, b, X, Y)
 
         # Retrieve derivatives from grads
         dw = grads["dw"]
         db = grads["db"]
 
-        # update rule (≈ 2 lines of code)
+        # update rule
         w = w - learning_rate * dw
         b = b - learning_rate * db
 
@@ -192,7 +190,7 @@ def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost = False):
 
         # Print the cost every 100 training examples
         if print_cost and i % 100 == 0:
-            print ("Cost after iteration %i: %f" %(i, cost))
+            print("Cost after iteration %i: %f" % (i, cost))
 
     params = {"w": w,
               "b": b}
@@ -226,11 +224,11 @@ def propagate(w, b, X, Y):
 
     # FORWARD PROPAGATION (FROM X TO COST)
     A = sigmoid(np.dot(w.T, X) + b)                                     # compute activation
-    cost = 1/m * np.sum(-Y * np.log(A) - (1 - Y) * np.log(1 - A))                                  # compute cost
+    cost = 1 / m * np.sum(-Y * np.log(A) - (1 - Y) * np.log(1 - A))                                  # compute cost
 
     # BACKWARD PROPAGATION (TO FIND GRAD)
-    dw = 1/m * np.dot(X, (A - Y).T)
-    db = 1/m * np.sum(A - Y)
+    dw = 1 / m * np.dot(X, (A - Y).T)
+    db = 1 / m * np.sum(A - Y)
 
     assert(dw.shape == w.shape)
     assert(db.dtype == float)
