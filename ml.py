@@ -88,7 +88,7 @@ def initialize_with_zeros(dim):
     return w, b
 
 
-def model(X_train, Y_train, X_test, Y_test, num_iterations=2000, learning_rate=0.5, print_cost=False):
+def model(X_train, Y_train, X_test, Y_test, num_iterations=2000, learning_rate=0.5, print_cost=False, iw=None, ib=None):
     """
     Builds the logistic regression model by calling the function you've implemented previously
 
@@ -105,8 +105,16 @@ def model(X_train, Y_train, X_test, Y_test, num_iterations=2000, learning_rate=0
     d -- dictionary containing information about the model.
     """
 
-    # initialize parameters with zeros
-    w, b = np.zeros((X_train.shape[0], 1)), 0
+    # initialize parameters
+    if iw is None:
+        w = np.zeros((X_train.shape[0], 1))
+    else:
+        w = iw
+
+    if ib is None:
+        b = 0
+    else:
+        b = ib
 
     # Gradient descent
     parameters, grads, costs = optimize(w, b, X_train, Y_train, num_iterations, learning_rate, print_cost)
@@ -171,6 +179,9 @@ def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost=False):
 
     costs = []
 
+    COST_THRESHOLD = 0.23
+    DIFF_THRESHOLD = 0.0001
+
     for i in range(num_iterations):
 
         # Cost and gradient calculation
@@ -190,7 +201,16 @@ def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost=False):
 
         # Print the cost every 100 training examples
         if print_cost and i % 100 == 0:
-            print("Cost after iteration %i: %f" % (i, cost))
+            if (i > 0):
+                prev_cost = costs[-2]
+            else:
+                prev_cost = 1
+            diff = prev_cost - cost
+            print("Cost after iteration %i: %f (%f)" % (i, cost, diff))
+            if cost < COST_THRESHOLD:
+                break
+            if diff < DIFF_THRESHOLD:
+                break
 
     params = {"w": w,
               "b": b}

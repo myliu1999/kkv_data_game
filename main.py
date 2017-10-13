@@ -283,7 +283,7 @@ def get_x_data(is_train, index, ans_obj):
     return x_data
 
 
-def machine_learning(is_train, train_start_index=0, train_count=60):
+def machine_learning(is_train, train_start_index=0, train_count=6):
     ans_obj_train = [None for i in range(train_count)]
     for i in range(train_start_index, train_start_index + train_count):
         ans_train = PATH + 'ans/ans-%05d' % i
@@ -309,19 +309,22 @@ def machine_learning(is_train, train_start_index=0, train_count=60):
         test_set_x_orig = get_x_data(True, train_start_index, [ans_obj_train[0]])
         test_set_x = array(test_set_x_orig).T
 
-    num_iterations = 4000
-    learning_rate = 0.005 * 2
+    num_iterations = 4000 * 40
+    learning_rate = 0.005 * 4
     print_cost = True
     print('num_iterations = %d, learning_rate = %f' % (num_iterations, learning_rate))
     predict_train = [[] for i in range(SLOT_COUNT)]
-    # if is_train is False:
     predict_test = [[] for i in range(SLOT_COUNT)]
+    iw, ib = None, None
     for model_no in range(1, SLOT_COUNT + 1):
         print(ans_header[model_no])
         train_set_y_orig = [[int(ans_obj_train[j].data[i][ans_header[model_no]]) for j in range(len(ans_obj_train)) for i in range(ans_obj_train[j].entry_count)]]
         train_set_y = array(train_set_y_orig)
 
-        d = ml.model(train_set_x, train_set_y, test_set_x, None, num_iterations, learning_rate, print_cost)
+        d = ml.model(train_set_x, train_set_y, test_set_x, None, num_iterations, learning_rate, print_cost, iw, ib)
+
+        iw = d['w']
+        ib = d['b']
 
         predict_train[model_no - 1] = d['Y_prediction2_train'][0]
         predict_test[model_no - 1] = d['Y_prediction2_test'][0]
