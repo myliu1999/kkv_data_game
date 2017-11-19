@@ -197,7 +197,7 @@ def get_x_data(is_train, index, ans_obj):
     return x_data
 
 
-def machine_learning(is_train, train_start_index=1, train_count=2):
+def machine_learning(is_train, train_start_index=1, train_count=6):
     ans_obj_train = [None for i in range(train_count)]
     for i in range(train_start_index, train_start_index + train_count):
         ans_train = PATH + 'public/label-%03d.csv' % i

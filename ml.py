@@ -179,7 +179,7 @@ def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost=False):
 
     costs = []
 
-    COST_THRESHOLD = 0.23
+    COST_THRESHOLD = 0.2
     DIFF_THRESHOLD = 0.0001
 
     for i in range(num_iterations):
