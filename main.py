@@ -5,6 +5,7 @@ import csv
 from datetime import datetime, timedelta
 import math
 
+import numpy as np
 from numpy import array
 
 from auc import auc
@@ -197,6 +198,32 @@ def get_x_data(is_train, index, ans_obj):
     return x_data
 
 
+def gen_x_data(is_train, train_start_index=1, train_count=36):
+    ans_obj_train = [None for i in range(train_count)]
+    for i in range(train_start_index, train_start_index + train_count):
+        ans_train = PATH + 'public/label-%03d.csv' % i
+        ans_obj_train[i - 1] = AnswerReader(ans_train)
+
+    if is_train is False:
+        ans_obj_test = AnswerReader(ans_test)
+        test_start_index = 46
+
+    m_train = sum(ans_obj.entry_count for ans_obj in ans_obj_train)
+    if is_train is False:
+        m_test = ans_obj_test.entry_count
+
+    if is_train is False:
+        # prepare test set
+        test_set_x_orig = get_x_data(False, test_start_index, ans_obj_test)
+        test_set_x = array(test_set_x_orig).T
+        np.savetxt('x_data_test.txt', test_set_x)
+    else:
+        # prepare training set
+        train_set_x_orig = get_x_data(True, train_start_index, ans_obj_train)
+        train_set_x = array(train_set_x_orig).T
+        np.savetxt('x_data_train_%d_%d.txt' % (train_start_index, train_count), train_set_x)
+
+
 def machine_learning(is_train, train_start_index=1, train_count=36):
     ans_obj_train = [None for i in range(train_count)]
     for i in range(train_start_index, train_start_index + train_count):
@@ -257,6 +284,12 @@ def machine_learning(is_train, train_start_index=1, train_count=36):
 def main():
     is_train = False
     machine_learning(is_train)
+    # gen_x_data(is_train)
+
+    # x_data = [[1, 2, 3], [2, 3, 4]]
+    # np.savetxt('test.txt', x_data)
+    # new_data = np.loadtxt('test.txt')
+    # print(new_data)
 
 
 if __name__ == '__main__':
