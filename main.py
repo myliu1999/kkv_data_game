@@ -215,16 +215,37 @@ def gen_x_data(is_train, train_start_index=1, train_count=36):
     if is_train is False:
         # prepare test set
         test_set_x_orig = get_x_data(False, test_start_index, ans_obj_test)
-        test_set_x = array(test_set_x_orig).T
-        np.savetxt('x_data_test.txt', test_set_x)
+        np.savetxt('x_data_test.txt', test_set_x_orig)
     else:
         # prepare training set
         train_set_x_orig = get_x_data(True, train_start_index, ans_obj_train)
-        train_set_x = array(train_set_x_orig).T
-        np.savetxt('x_data_train_%d_%d.txt' % (train_start_index, train_count), train_set_x)
+        np.savetxt('x_data_train_%d_%d.txt' % (train_start_index, train_count), train_set_x_orig)
 
 
-def machine_learning(is_train, train_start_index=1, train_count=36):
+def gen_y_data(train_start_index=1, train_count=36):
+    ans_obj_train = [None for i in range(train_count)]
+    for i in range(train_start_index, train_start_index + train_count):
+        ans_train = PATH + 'public/label-%03d.csv' % i
+        ans_obj_train[i - 1] = AnswerReader(ans_train)
+
+    total_entry = 0
+    for i in range(train_start_index, train_start_index + train_count):
+        total_entry += ans_obj_train[i - 1].entry_count
+
+    y_data = [[0. for i in range(SLOT_COUNT)] for j in range(total_entry)]
+
+    index = 0
+    for i in range(train_start_index, train_start_index + train_count):
+        for j in range(ans_obj_train[i - 1].entry_count):
+            for k in range(SLOT_COUNT):
+                y_data[index][k] = float(ans_obj_train[i - 1].data[j][ans_header[k + 1]])
+            index += 1
+
+    print(len(y_data))
+    np.savetxt('y_data_train.txt', y_data)
+
+
+def machine_learning(is_train, train_start_index=1, train_count=1):
     ans_obj_train = [None for i in range(train_count)]
     for i in range(train_start_index, train_start_index + train_count):
         ans_train = PATH + 'public/label-%03d.csv' % i
@@ -285,11 +306,16 @@ def main():
     is_train = False
     machine_learning(is_train)
     # gen_x_data(is_train)
+    # gen_y_data()
 
     # x_data = [[1, 2, 3], [2, 3, 4]]
     # np.savetxt('test.txt', x_data)
-    # new_data = np.loadtxt('test.txt')
-    # print(new_data)
+    # new_data = np.loadtxt('x_data_train_1_36.txt')
+    # test_set_x = array(new_data).T
+    # print(len(test_set_x))
+
+    # 37092 test set
+    # 45712 train set
 
 
 if __name__ == '__main__':
